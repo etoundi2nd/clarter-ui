@@ -1,0 +1,5 @@
+{
+  "layout:clarter-ui": {
+    "cmd-alt-b": "clarter-ui.toggle-activity"
+  }
+}

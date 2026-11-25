@@ -1,0 +1,103 @@
+{
+  "id": "root",
+  "type": "row",
+  "titlebar": "none",
+  "traffic_lights": [13, 18],
+  "background": "canvas",
+  "ui_font": "Inter",
+  "terminal_padding": [14, 12],
+  "colors": {
+    "background": "#22262b",
+    "canvas": "#17191b",
+    "chrome": "#17191b",
+    "surface": "#17191b",
+    "popover": "#1f2225",
+    "raised": "#36393d",
+    "hover": "#2d3034",
+    "selected": "#2d3034",
+    "border": "#303236",
+    "input": "#4a4e53",
+    "foreground": "#adb3be",
+    "muted": "#adb0b4",
+    "dim": "#7c7f82",
+    "accent": "#82b7ed",
+    "cursor": "#aeb4bf"
+  },
+  "divider": { "width": 1, "color": "#303236" },
+  "children": [
+    {
+      "id": "sidebar",
+      "type": "column",
+      "size": { "px": 311 },
+      "min": 44,
+      "max": 520,
+      "background": "#17191b",
+      "children": [
+        { "id": "brand", "type": "block", "size": { "px": 46 }, "window_drag": true,
+          "content": { "mod": "clarter-ui", "props": { "role": "brand" } } },
+        { "id": "spaces", "type": "block",
+          "content": { "mod": "clarter-ui", "props": { "role": "spaces" } } },
+        { "id": "sidebar-footer", "type": "block", "size": { "px": 69 },
+          "content": { "mod": "clarter-ui", "props": { "role": "footer" } } }
+      ]
+    },
+    {
+      "id": "work",
+      "type": "column",
+      "resizable": false,
+      "children": [
+        { "id": "toolbar", "type": "block", "size": { "px": 42 }, "window_drag": true,
+          "content": { "mod": "clarter-ui", "props": { "role": "toolbar" } } },
+        {
+          "id": "work-body",
+          "type": "row",
+          "padding": 8,
+          "gap": 8,
+          "children": [
+            {
+              "id": "main",
+              "type": "block",
+              "content": {
+                "tab": "active",
+                "pane": {
+                  "gap": 8,
+                  "radius": 10,
+                  "background": "background",
+                  "lone": true,
+                  "border": { "width": 1, "color": "#363a3f" },
+                  "focus": { "width": 1, "color": "#82b7ed" },
+                  "header": { "content": { "mod": "clarter-ui-pane" }, "height": 30, "position": "top", "reveal": "always" }
+                }
+              }
+            },
+            {
+              "id": "panel",
+              "type": "column",
+              "hidden": true,
+              "size": { "px": 288 },
+              "min": 240,
+              "max": 900,
+              "radius": 10,
+              "border": { "width": 1, "color": "#363a3f" },
+              "background": "#17191b",
+              "children": [
+                {
+                  "id": "panel-body",
+                  "type": "stack",
+                  "active": "activity",
+                  "children": [
+                    { "id": "activity", "type": "block", "content": { "mod": "clarter-ui", "props": { "role": "activity" } } },
+                    { "id": "files", "type": "block", "content": { "mod": "files" } },
+                    { "id": "changes", "type": "block", "content": { "mod": "changes" } }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        { "id": "status", "type": "block", "size": { "px": 28 },
+          "content": { "mod": "clarter-ui", "props": { "role": "status" } } }
+      ]
+    }
+  ]
+}

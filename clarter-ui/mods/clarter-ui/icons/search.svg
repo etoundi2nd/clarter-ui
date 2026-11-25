@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="icon/search" clip-path="url(#clip0_0_298)">
+<path id="search-path" d="M8.25 8.25L10.5 10.5M9 5.25C9 6.24456 8.60491 7.19839 7.90165 7.90165C7.19839 8.60491 6.24456 9 5.25 9C4.25544 9 3.30161 8.60491 2.59835 7.90165C1.89509 7.19839 1.5 6.24456 1.5 5.25C1.5 4.25544 1.89509 3.30161 2.59835 2.59835C3.30161 1.89509 4.25544 1.5 5.25 1.5C6.24456 1.5 7.19839 1.89509 7.90165 2.59835C8.60491 3.30161 9 4.25544 9 5.25Z" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" stroke="#7C7F82"/>
+</g>
+<defs>
+<clipPath id="clip0_0_298">
+<rect width="12" height="12" fill="white"/>
+</clipPath>
+</defs>
+</svg>
