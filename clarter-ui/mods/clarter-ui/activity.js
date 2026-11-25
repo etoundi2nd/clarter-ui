@@ -3,7 +3,8 @@
 import { div, image, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { spaces, agents, terminals, focused, run, exec, home, appHome, readTextFile, shared, checking, window, settings } from "herdr";
-import { C, ICON, AUTO, stop, age } from "./tokens.js";
+import { C, ICON, AUTO, stop, age, layoutSettings } from "./tokens.js";
+import { openSettings } from "./sidebar.js";
 import { LIFECYCLE, REVIEW, CI, tooltip } from "./github.js";
 import { togglePanel } from "./workspace.js";
 
@@ -110,6 +111,7 @@ export class Activity {
         const small = (s) => div().flex_none().text_size(10).line_height("12px").text_color(C.textMuted).child(s);
         return div().id(`pr-${pr.number}`).w_full().h(40).flex_none().relative().rounded(6).cursor_pointer()
             .hover((s) => s.bg(C.bgRowHover))
+            .on_hover((on, cx) => { this.hoverPr = on ? pr.url : this.hoverPr === pr.url ? null : this.hoverPr; cx.notify(); })
             .tooltip(tooltip(pr))
             .on_click((_e, cx) => {
                 this.seen[pr.url] = pr.lastReviewAt ?? new Date().toISOString();
@@ -134,8 +136,30 @@ export class Activity {
                 .when(pr.reviewers > 0, (el) => el
                     .child(dot())
                     .child(small(`${pr.approvals}/${pr.reviewers}`)))
+                .when(this.hoverPr === pr.url, (el) => el
+                    .child(dot())
+                    .child(h_flex().id(`ai-review-${pr.number}`).flex_none().h(14).px(3).rounded(3).items_center().cursor_pointer()
+                        .hover((s) => s.bg(C.bgRowSelected))
+                        .tooltip(this.reviewTip())
+                        .on_mouse_down("left", stop)
+                        .on_click((_e, cx) => { cx.stop_propagation(); this.aiReview(pr); })
+                        .child(image(ICON("sparkle")).size(10).flex_none())
+                        .child(div().ml(3).text_size(10).line_height("12px").text_color(C.textPrimary).child("AI review"))))
                 .child(div().flex_1())
                 .child(small(age(pr.updatedAt))));
+    }
+
+    reviewTip() {
+        const cmd = layoutSettings(shared).aiCommand;
+        return cmd ? `Review this pull request in a new tab with ${cmd}` : "Choose an AI command in Layout settings";
+    }
+
+    aiReview(pr) {
+        const s = layoutSettings(shared);
+        if (!s.aiCommand) return openSettings();
+        const space = spaces().find((x) => x.active);
+        const task = s.reviewPrompt.replaceAll("{url}", pr.url).replaceAll("{number}", String(pr.number)).replaceAll("{title}", pr.title);
+        run("tab.new", { space: space?.id, folder: this.root, name: `Review #${pr.number}`, argv: s.aiCommand.trim().split(/\s+/), task, focus: true });
     }
 
     serverRow(cmd, space) {
@@ -157,11 +181,12 @@ export class Activity {
                 .child(div().ml(4).text_size(11).line_height("14px").text_color(C.textMuted).child(running ? "Stop" : "Start")));
     }
 
-    bar(width, used) {
+    bar(used) {
         const fill = used >= 90 ? C.statusError : used >= 70 ? C.statusWarning : C.statusSuccess;
-        return div().w(width).h(13).flex_none().relative()
-            .child(div().absolute().left(0).top(4).w(width).h(5).rounded(2.5).bg(C.bgProgressTrack))
-            .child(div().absolute().left(0).top(4).w((width * used) / 100).h(5).rounded(2.5).bg(fill));
+        const pct = Math.max(0, Math.min(100, used));
+        return div().flex_basis(84).flex_grow(1).flex_shrink(1).min_w(24).h(13).relative()
+            .child(div().absolute().left(0).right(0).top(4).h(5).rounded(2.5).bg(C.bgProgressTrack))
+            .child(div().absolute().left(0).top(4).w(`${pct}%`).h(5).rounded(2.5).bg(fill));
     }
 
     provider(u) {
@@ -177,8 +202,8 @@ export class Activity {
             .children(u.limits.map((l) => {
                 const warn = l.used >= 70;
                 return h_flex().w_full().h(24).pt(5).pb(6).px(8).items_start()
-                    .child(div().w(84).flex_none().text_size(11).line_height("13px").text_color(C.textMuted).child(l.label))
-                    .child(this.bar(84, l.used))
+                    .child(div().flex_basis(84).flex_shrink(50).min_w(Math.ceil(l.label.length * 5.6) + 8).truncate().text_size(11).line_height("13px").text_color(C.textMuted).child(l.label))
+                    .child(this.bar(l.used))
                     .child(h_flex().w(38).flex_none().justify_end().text_size(11).line_height("13px").text_color(warn ? C.statusWarning : C.textPrimary).child(`${Math.round(l.used)}%`))
                     .child(h_flex().w(50).flex_none().justify_end().text_size(10).line_height("13px").text_color(C.textMuted).child(l.left != null ? left(l.left) : ""));
             }));
@@ -194,9 +219,9 @@ export class Activity {
             .child(div().w_full().h(24).relative()
                 .child(div().absolute().left(8).top(5).text_size(12).line_height("14px").font_weight(500).text_color(C.textPrimary).child("This session"))
                 .child(h_flex().absolute().left(100).right(8).top(6).h(13).justify_end().child(div().min_w(0).truncate().text_size(10).line_height("13px").text_color(C.textMuted).child(where))))
-            .child(div().w_full().h(20).relative()
-                .child(div().absolute().left(8).top(3).child(this.bar(190, info.context)))
-                .child(div().absolute().right(8).top(2).text_size(11).line_height("13px").text_color(C.textPrimary).child(`ctx ${Math.round(info.context)}%`)))
+            .child(h_flex().w_full().h(20).px(8).pt(2).items_start()
+                .child(this.bar(info.context))
+                .child(div().ml(8).flex_none().text_size(11).line_height("13px").text_color(C.textPrimary).child(`ctx ${Math.round(info.context)}%`)))
             .child(div().w_full().h(24).relative()
                 .child(div().absolute().left(8).right(8).top(3).truncate().text_size(10).line_height("13px").text_color(C.textMuted)
                     .child([info.model, info.effort && `${info.effort} effort`, info.cacheUntil && info.cacheUntil > Date.now() / 1000 ? `cache warm for ${left(info.cacheUntil - Date.now() / 1000)}` : info.cacheUntil ? "cache expired" : null].filter(Boolean).join(" · "))));

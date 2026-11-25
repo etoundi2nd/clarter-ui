@@ -71,3 +71,11 @@ export function age(iso) {
     if (!(s >= 0)) return "";
     return s < 3600 ? `${Math.max(1, Math.floor(s / 60))}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
 }
+
+// The layout's own settings (the sidebar's "Layout settings"), kept in shared "clarter-ui.settings".
+export const SETTINGS_DEFAULTS = { aiCommands: ["claude"], aiCommand: "claude", reviewPrompt: "Review pull request {url}" };
+export function layoutSettings(shared) {
+    const s = { ...SETTINGS_DEFAULTS, ...(shared("clarter-ui.settings") ?? {}) };
+    if (!s.aiCommands.includes(s.aiCommand)) s.aiCommand = s.aiCommands[0] ?? null;
+    return s;
+}

@@ -37,7 +37,7 @@
           "content": { "mod": "clarter-ui", "props": { "role": "brand" } } },
         { "id": "spaces", "type": "block",
           "content": { "mod": "clarter-ui", "props": { "role": "spaces" } } },
-        { "id": "sidebar-footer", "type": "block", "size": { "px": 69 },
+        { "id": "sidebar-footer", "type": "block", "size": { "px": 97 },
           "content": { "mod": "clarter-ui", "props": { "role": "footer" } } }
       ]
     },

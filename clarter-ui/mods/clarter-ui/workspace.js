@@ -3,6 +3,7 @@ import { div, image, svg } from "gpui-kit";
 import { h_flex } from "gpui-base";
 import { spaces, panes, agents, run, openOverlay, layout, window, settings, nextCommand, checking, exec, appHome } from "herdr";
 import { C, ICON, AUTO, stop, LAUNCHER, findLauncher } from "./tokens.js";
+import { openSettings } from "./sidebar.js";
 
 const clean = (s) => (s ?? "").replace(/^[^\p{L}\p{N}\p{Ps}\p{Pi}]+/u, "").replace(/^\[ [!.] \] /, "").trim();
 
@@ -42,6 +43,7 @@ export class Toolbar {
             for (;;) {
                 const c = await nextCommand();
                 if (/toggle-activity$/.test(c)) togglePanel("activity");
+                else if (/settings$/.test(c)) openSettings();
                 cx.notify();
             }
         });

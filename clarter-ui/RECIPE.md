@@ -27,7 +27,8 @@ The app background is `#17191b`, terminals sit on `#22262b`, text is Inter.
       session's pull request chip and a sub-agent count.
     - The details line (10px, `#969ba2`): model • effort • context % (`#77be8f`) • time since the
       last reply, then the account's user name once this computer has more than one Claude account.
-  - Footer, 69px: Settings (a blue dot when an update is ready) and Add machine.
+  - Footer, 97px: Layout settings, App settings (a blue dot when an update is ready) and Add
+    machine.
   - Folded under 160px wide, the sidebar becomes a rail of 24px space badges.
 - **Toolbar**, 42px, draggable: the shown space's tabs as pills (29px high, radius 7; the active
   one `#36393d` with a `#4a4e53` border and a close ×), a + menu, and Files, Changes and Activity
@@ -38,7 +39,8 @@ The app background is `#17191b`, terminals sit on `#22262b`, text is Inter.
 - **Activity panel** (radius 10, border `#363a3f`), sections split by 1px `#303438` lines:
   - **Pull requests**: open PRs involving you in the repo (`gh` `involves:@me`), 40px rows,
     at most half the panel's height, scrolling beyond. Each row: the lifecycle icon, title, CI
-    mark, then number, comments, review state and approvals, and age.
+    mark, then number, comments, review state and approvals, and age. On hover an "AI review"
+    button follows the approvals.
   - **Servers**: `bin/dev`, `bin/server`, `bin/servers` when the repo has them, each with
     Start / Stop.
   - **Usage**: one block per Claude account with a session open (plus Codex), with its plan badge
@@ -65,6 +67,12 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   name. A space left empty is removed. The view follows the focused tab.
 - The behind chip pulls (`git pull --ff-only`); the GitHub chip opens the repo; the PR chips
   open the PR. A PR with a review you haven't opened yet shows a mark until you click it.
+- **Layout settings** (a dialog; also the `clarter-ui.settings` command): the AI commands, such
+  as shell aliases that sign in to a particular account, the one AI review runs, and the review
+  prompt (`{url}`, `{number}`, `{title}`). Kept in shared `clarter-ui.settings`.
+- **AI review** opens a tab named `Review #N` in the repo's folder, runs the selected command in
+  your interactive shell (aliases and functions work) and sends the review prompt as its first
+  message.
 - `cmd-alt-b` toggles the Activity panel; Files and Changes share the same panel.
 - Usage refreshes every 10 minutes; agent details every 10 seconds; PRs every 30 seconds.
 
@@ -75,8 +83,8 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   `toolbar`, `work-body` row, `status`). `work-body` holds `main` (the tab, panes as cards with a
   `clarter-ui-pane` header) and the hidden `panel` column with a `panel-body` stack of `activity`,
   the shipped `files` and the shipped `changes`.
-- `mods/clarter-ui`: one mod; `props.role` picks brand, spaces, footer, toolbar, activity or
-  status. `tokens.js` holds the colours; `github.js` the PR states.
+- `mods/clarter-ui`: one mod; `props.role` picks brand, spaces, footer, toolbar, activity,
+  status or settings (the dialog). `tokens.js` holds the colours; `github.js` the PR states.
 - `mods/clarter-ui-pane`: the pane header.
 - Herdr functions: `spaces`, `panes`, `agents`, `terminals`, `focused`, `layout`, `window`,
   `shared`, `setShared`, `exec`, `openOverlay`, `nextCommand`; commands `space.select`,
@@ -119,6 +127,8 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
 - A running Claude Code row shows its model, context and time; with two Claude accounts signed
   in, each row also names its account user.
 - Hovering a row shows the close button; clicking it closes the pane.
+- Hovering a PR row shows AI review; clicking it opens a tab running the selected AI command
+  with the review prompt.
 - `cmd-alt-b` and the Activity button show and hide the panel; in a GitHub repo it lists your
   open PRs, scrolling once they fill half the panel.
 - The space header's + appears only on hover; the triangle folds the space.

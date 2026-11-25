@@ -58,6 +58,8 @@ export class Brand {
     }
 }
 
+export const openSettings = () => openOverlay({ mod: "clarter-ui", kind: "dialog", width: 460, height: 470, props: { role: "settings" } });
+
 export class Footer {
     row(id, icon, size, iconLeft, label, color, action) {
         return div().id(id).absolute().left(8).right(8).h(28).rounded(6).cursor_pointer()
@@ -69,13 +71,15 @@ export class Footer {
 
     render() {
         if (narrow()) return v_flex().size_full().bg(C.bgSidebar).border_t(1).border_color(C.borderSubtle).items_center().pt(6).gap(4)
-            .child(iconButton("settings", "settings", 14, 28, () => run("app.settings"), "Settings"))
+            .child(iconButton("layout-settings", "sliders", 14, 28, openSettings, "Layout settings"))
+            .child(iconButton("settings", "settings", 14, 28, () => run("app.settings"), "App settings"))
             .child(iconButton("machine", "plus", 12, 28, () => run("mod.open", { name: "machine-add" }), "Add machine"));
         const ready = Boolean(updates()?.app?.ready);
         return div().size_full().relative().bg(C.bgSidebar).border_t(1).border_color(C.borderSubtle)
-            .child(this.row("settings", "settings", 14, 8, "Settings", C.textSecondary, () => run("app.settings")).top(5)
-                .when(ready, (el) => el.child(div().size(6).rounded(3).bg(C.accent).absolute().left(92).top(11))))
-            .child(this.row("machine", "plus", 12, 9, "Add machine", C.textTertiary, () => run("mod.open", { name: "machine-add" })).top(33));
+            .child(this.row("layout-settings", "sliders", 14, 8, "Layout settings", C.textSecondary, openSettings).top(5))
+            .child(this.row("settings", "settings", 14, 8, "App settings", C.textSecondary, () => run("app.settings")).top(33)
+                .when(ready, (el) => el.child(div().size(6).rounded(3).bg(C.accent).absolute().left(120).top(11))))
+            .child(this.row("machine", "plus", 12, 9, "Add machine", C.textTertiary, () => run("mod.open", { name: "machine-add" })).top(61));
     }
 }
 
