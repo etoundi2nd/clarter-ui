@@ -7,7 +7,9 @@ import {
     layout, window, shared, setShared, checking, updates, notify, home,
 } from "herdr";
 import { C, ICON, AUTO, stop, duration, LAUNCHER, findLauncher } from "./tokens.js";
-import { prStatusChip } from "./github.js";
+import { prStatusChip, prMenuChip } from "./github.js";
+
+const MAX_SESSION_PRS = 12;
 import { agentTask, codexTitle, isCodex, clean } from "./agent-name.js";
 
 const NEW_CLI = "Terminal";
@@ -57,8 +59,6 @@ export class Brand {
             .child(iconButton("sidebar-toggle", "sidebar", 12, 24, toggleSidebar, "Hide sidebar").absolute().right(11).top(12));
     }
 }
-
-export const openSettings = () => openOverlay({ mod: "clarter-ui", kind: "dialog", width: 460, height: 470, props: { role: "settings" } });
 
 export class Footer {
     row(id, icon, size, iconLeft, label, color, action) {
@@ -164,11 +164,12 @@ export class Spaces {
         cx.spawn(async (cx) => {
             try {
                 const found = json(await python(["-I", `${appHome()}/mods/clarter-ui/pr-info.py`, ...paths])) ?? {};
-                const keyOf = {};
-                for (const [transcript, rows] of Object.entries(found)) if (rows?.[0]) keyOf[transcript] = `${rows[0].repo}#${rows[0].number}`;
-                const keys = [...new Set(Object.values(keyOf))];
+                const keysOf = {};
+                for (const [transcript, rows] of Object.entries(found)) keysOf[transcript] = (rows ?? []).slice(0, MAX_SESSION_PRS).map((r) => `${r.repo}#${r.number}`);
+                const keys = [...new Set(Object.values(keysOf).flat())];
                 const details = keys.length ? json(await python(["-I", `${appHome()}/mods/clarter-ui/github.py`, "prs", ...keys])) ?? {} : {};
-                const prs = Object.fromEntries(Object.entries(keyOf).map(([t, k]) => [t, details[k]]).filter(([, d]) => d));
+                // Best first, as pr-info.py ranks them.
+                const prs = Object.fromEntries(Object.entries(keysOf).map(([t, ks]) => [t, ks.map((k) => details[k]).filter(Boolean)]).filter(([, l]) => l.length));
                 if (JSON.stringify(prs) !== JSON.stringify(this.prs)) { this.prs = prs; cx.notify(); }
             } finally { this.prBusy = false; }
         });
@@ -299,10 +300,14 @@ export class Spaces {
     paneRow(p, tab, focusedPane) {
         const a = agents().find((x) => x.address === p.terminal);
         const info = a ? this.info[a.address] : null;
-        const pr = info?.transcript ? this.prs[info.transcript] : null;
+        const prs = info?.transcript ? this.prs[info.transcript] ?? [] : [];
         const subs = a ? terminals().filter((k) => k.parent === a.address && k.state === "live") : [];
         const actions = [
-            pr && prStatusChip(`pr-${p.pane}`, pr, (url) => exec("open", [url])),
+            prs.length === 1 && prStatusChip(`pr-${p.pane}`, prs[0], (url) => exec("open", [url])),
+            prs.length > 1 && prMenuChip(`prs-${p.pane}`, prs, (e) => openOverlay({
+                mod: "clarter-ui", kind: "popup", at: e.position, width: 340, height: Math.min(30 + prs.length * 40 + 8, 440),
+                props: { role: "prlist", prs, folder: p.cwd ?? info?.cwd ?? null },
+            })),
             subs.length > 0 && this.subToggle(a.address, subs.length),
         ].filter(Boolean);
         const prog = p.program;

@@ -3,16 +3,14 @@
 import { div, image, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { spaces, agents, terminals, focused, run, exec, home, appHome, readTextFile, shared, checking, window, settings } from "herdr";
-import { C, ICON, AUTO, stop, age, layoutSettings } from "./tokens.js";
-import { openSettings } from "./sidebar.js";
-import { LIFECYCLE, REVIEW, CI, tooltip } from "./github.js";
+import { C, ICON, AUTO, stop, age } from "./tokens.js";
+import { prRow } from "./github.js";
 import { togglePanel } from "./workspace.js";
 
 const python = (args) => exec("python3", args).catch(() => null);
 const json = (r) => { try { return r?.code === 0 ? JSON.parse(r.stdout || "null") : null; } catch { return null; } };
 const CODEX = `f=$(ls -t "$HOME"/.codex/sessions/*/*/*/*.jsonl 2>/dev/null | head -n 1); [ -n "$f" ] || exit 0
 grep -o '"rate_limits":{.*' "$f" | tail -n 1 | sed 's/^"rate_limits"://' | jq -c '{plan: .plan_type, primary, secondary}' 2>/dev/null`;
-const dot = () => h_flex().w(12).flex_none().justify_center().text_size(10).line_height("12px").text_color(C.textMuted).child("•");
 
 function plan(account) {
     if (account?.planDisplayName) return account.planDisplayName.replace(/^claude\s+/i, "");
@@ -104,62 +102,18 @@ export class Activity {
     }
 
     prRow(pr) {
-        const life = LIFECYCLE[pr.lifecycle] ?? LIFECYCLE.open;
-        const fresh = pr.lastReviewAt && pr.lastReviewAt > (this.seen[pr.url] ?? "");
-        const ci = pr.ci && CI[pr.ci];
-        const review = pr.review && REVIEW[pr.review];
-        const small = (s) => div().flex_none().text_size(10).line_height("12px").text_color(C.textMuted).child(s);
-        return div().id(`pr-${pr.number}`).w_full().h(40).flex_none().relative().rounded(6).cursor_pointer()
-            .hover((s) => s.bg(C.bgRowHover))
-            .on_hover((on, cx) => { this.hoverPr = on ? pr.url : this.hoverPr === pr.url ? null : this.hoverPr; cx.notify(); })
-            .tooltip(tooltip(pr))
-            .on_click((_e, cx) => {
+        return prRow(pr, {
+            hovered: this.hoverPr === pr.url,
+            onHover: (on, cx) => { this.hoverPr = on ? pr.url : this.hoverPr === pr.url ? null : this.hoverPr; cx.notify(); },
+            fresh: pr.lastReviewAt && pr.lastReviewAt > (this.seen[pr.url] ?? ""),
+            onClick: (cx) => {
                 this.seen[pr.url] = pr.lastReviewAt ?? new Date().toISOString();
                 localStorage.setItem("clarter-ui.seenReviews", JSON.stringify(this.seen));
                 exec("open", [pr.url]);
                 cx.notify();
-            })
-            .child(image(ICON(life.icon)).size(12).absolute().left(8).top(5))
-            .child(h_flex().absolute().left(26).right(8).top(4).h(14).gap(6).items_start()
-                .child(div().flex_1().min_w(0).truncate().text_size(12).line_height("14px").text_color(C.textPrimary).child(pr.title))
-                .when(Boolean(fresh), (el) => el.child(div().id(`fresh-${pr.number}`).size(12).flex_none().mt(1).tooltip("New review since you last opened it")
-                    .child(image(ICON("stack-add")).size(12))))
-                .when(Boolean(ci), (el) => el.child(h_flex().flex_none().h(12).mt(1).items_center().tooltip(ci.label)
-                    .child(div().text_size(10).line_height("12px").text_color(ci.color).child("CI"))
-                    .child(pr.ci === "pending" ? div().size(6).rounded(3).ml(2).bg(C.textMuted) : image(ICON(ci.icon)).size(10).ml(2)))))
-            .child(h_flex().absolute().left(26).right(8).top(20).h(12).items_center()
-                .child(small(`#${pr.number}`)).child(dot())
-                .child(image(ICON("comment")).size(10).flex_none()).child(small(String(pr.comments)))
-                .when(Boolean(review), (el) => el
-                    .child(dot())
-                    .child(image(ICON(review.icon)).size(10).flex_none()).child(small(review.label)))
-                .when(pr.reviewers > 0, (el) => el
-                    .child(dot())
-                    .child(small(`${pr.approvals}/${pr.reviewers}`)))
-                .when(this.hoverPr === pr.url, (el) => el
-                    .child(dot())
-                    .child(h_flex().id(`ai-review-${pr.number}`).flex_none().h(14).px(3).rounded(3).items_center().cursor_pointer()
-                        .hover((s) => s.bg(C.bgRowSelected))
-                        .tooltip(this.reviewTip())
-                        .on_mouse_down("left", stop)
-                        .on_click((_e, cx) => { cx.stop_propagation(); this.aiReview(pr); })
-                        .child(image(ICON("sparkle")).size(10).flex_none())
-                        .child(div().ml(3).text_size(10).line_height("12px").text_color(C.textPrimary).child("AI review"))))
-                .child(div().flex_1())
-                .child(small(age(pr.updatedAt))));
-    }
-
-    reviewTip() {
-        const cmd = layoutSettings(shared).aiCommand;
-        return cmd ? `Review this pull request in a new tab with ${cmd}` : "Choose an AI command in Layout settings";
-    }
-
-    aiReview(pr) {
-        const s = layoutSettings(shared);
-        if (!s.aiCommand) return openSettings();
-        const space = spaces().find((x) => x.active);
-        const task = s.reviewPrompt.replaceAll("{url}", pr.url).replaceAll("{number}", String(pr.number)).replaceAll("{title}", pr.title);
-        run("tab.new", { space: space?.id, folder: this.root, name: `Review #${pr.number}`, argv: s.aiCommand.trim().split(/\s+/), task, focus: true });
+            },
+            folder: this.root,
+        });
     }
 
     serverRow(cmd, space) {

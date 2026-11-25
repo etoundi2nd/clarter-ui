@@ -24,7 +24,8 @@ The app background is `#17191b`, terminals sit on `#22262b`, text is Inter.
       requests that involve you (`#969ba2`), and a + that appears on hover.
     - its sessions: 36px rows with a details line, 24px rows without one. A status mark at x 11,
       the title from x 25 (37 for a plain terminal, after a `>_` icon), and on the right the
-      session's pull request chip and a sub-agent count.
+      session's pull request chip and a sub-agent count. A session on several pull requests
+      shows "PR n" with a chevron instead; it opens a dropdown of those PRs as Activity rows.
     - The details line (10px, `#969ba2`): model • effort • context % (`#77be8f`) • time since the
       last reply, then the account's user name once this computer has more than one Claude account.
   - Footer, 97px: Layout settings, App settings (a blue dot when an update is ready) and Add
@@ -84,7 +85,7 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   `clarter-ui-pane` header) and the hidden `panel` column with a `panel-body` stack of `activity`,
   the shipped `files` and the shipped `changes`.
 - `mods/clarter-ui`: one mod; `props.role` picks brand, spaces, footer, toolbar, activity,
-  status or settings (the dialog). `tokens.js` holds the colours; `github.js` the PR states.
+  status, settings (the dialog) or prlist (a session's PR dropdown). `tokens.js` holds the colours; `github.js` the PR states, the PR row and AI review.
 - `mods/clarter-ui-pane`: the pane header.
 - Herdr functions: `spaces`, `panes`, `agents`, `terminals`, `focused`, `layout`, `window`,
   `shared`, `setShared`, `exec`, `openOverlay`, `nextCommand`; commands `space.select`,

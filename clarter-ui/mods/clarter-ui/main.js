@@ -6,8 +6,9 @@ import { Brand, Footer, Spaces } from "./sidebar.js";
 import { Toolbar, StatusBar } from "./workspace.js";
 import { Activity } from "./activity.js";
 import { Settings } from "./settings.js";
+import { PrList } from "./prlist.js";
 
-const ROLES = { brand: Brand, spaces: Spaces, footer: Footer, toolbar: Toolbar, status: StatusBar, activity: Activity, settings: Settings };
+const ROLES = { brand: Brand, spaces: Spaces, footer: Footer, toolbar: Toolbar, status: StatusBar, activity: Activity, settings: Settings, prlist: PrList };
 
 export default class ClarterUi extends View {
     init(p, cx) {
