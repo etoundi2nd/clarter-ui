@@ -44,6 +44,9 @@ The app background is `#17191b`, terminals sit on `#22262b`, text is Inter.
     button follows the approvals.
   - **Servers**: `bin/dev`, `bin/server`, `bin/servers` when the repo has them, each with
     Start / Stop.
+  - **Schedules**: the scheduled runs whose folder is the space's or its repo's (one row per task
+    and account), with when the next one runs and how the last went, a Start button for a run now
+    (a spinner while one is live) and an on/off switch.
   - **Usage**: one block per Claude account with a session open (plus Codex), with its plan badge
     (`#5b8fee` on `#20252b`), "updated Nm ago", and 5-hour, weekly and Opus bars (green, amber
     from 70%) with time to reset.
@@ -98,7 +101,9 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   `layout.select`, `layout.resize`, `app.settings`, `mod.open`.
 - Shipped mods it opens: `menu`, `picker`, `machine-add`, `files`, `changes`, `new-menu`; icons
   from `workspace-chrome` and `pane`.
-- Programs it runs (`exec`): `python3` with its own scripts, `gh`, `git`, `ps`, `open`, `test`.
+- Programs it runs (`exec`): `python3` with its own scripts, `gh`, `git`, `ps`, `open`, `test`, and
+  `herdr-task` when installed (`list --json` with each row's `cwd` and `next_at`, `run-now`, `on`/`off`
+  per task and account; its runs' terminals carry the `herdr-task` labels).
   - `claude-info.py` and `pr-info.py` (from Over9k, MIT): each Claude Code session's model,
     effort, context and pull requests, from Claude Code's own files.
   - `github.py`: PR state, review, CI and conflicts, a folder's repo and commits behind, and
@@ -122,6 +127,7 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   `new-menu`, which ignores the Spaces header's folder.
 - `overflow_y_scrollbar` needs a definite height: the PR list gets one from the panel's measured
   size.
+- Without `herdr-task` on the PATH (or in `~/.local/bin`) the Schedules section stays hidden.
 - `gh` must be signed in; without it the PR chips, PR list and repo chips stay empty.
 - A layout name with a space is not loaded; keep `clarter-ui`.
 

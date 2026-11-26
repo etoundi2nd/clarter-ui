@@ -1,11 +1,12 @@
 // The right panel: pull requests that involve you in the shown space's repo, its servers
-// (bin/dev and friends), and the plan limits and context of the session in focus.
+// (bin/dev and friends), its scheduled runs (herdr-task), and the plan limits and context of the session in focus.
 import { div, image, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { spaces, agents, terminals, focused, run, exec, home, appHome, readTextFile, shared, checking, window, settings } from "herdr";
 import { C, ICON, AUTO, stop, age } from "./tokens.js";
 import { prRow } from "./github.js";
 import { togglePanel } from "./workspace.js";
+import { loadSchedules, scheduleRow, scheduleKey, startSchedule, switchSchedule } from "./schedules.js";
 
 const python = (args) => exec("python3", args).catch(() => null);
 const json = (r) => { try { return r?.code === 0 ? JSON.parse(r.stdout || "null") : null; } catch { return null; } };
@@ -25,6 +26,8 @@ export class Activity {
     init(cx) {
         this.involved = null;
         this.servers = [];
+        this.schedules = [];
+        this.starting = new Set();
         this.usage = [];
         try { this.seen = JSON.parse(localStorage.getItem("clarter-ui.seenReviews") ?? "{}"); } catch { this.seen = {}; }
         if (checking()) return;
@@ -50,7 +53,8 @@ export class Activity {
                     const root = this.involved?.url ? (json(await python(["-I", `${appHome()}/mods/clarter-ui/github.py`, "repo", space.folder])) ?? {})[space.folder]?.root : null;
                     this.servers = await this.findServers(root ?? space.folder);
                     this.root = root ?? space.folder;
-                } else { this.involved = null; this.servers = []; }
+                    this.schedules = await loadSchedules([space.folder, root]);
+                } else { this.involved = null; this.servers = []; this.schedules = []; }
                 cx.notify();
             } finally { this.busy = false; }
         });
@@ -135,6 +139,29 @@ export class Activity {
                 .child(div().ml(4).text_size(11).line_height("14px").text_color(C.textMuted).child(running ? "Stop" : "Start")));
     }
 
+    scheduleRow(row) {
+        const key = scheduleKey(row);
+        return scheduleRow(row, {
+            starting: this.starting.has(key),
+            onStart: (cx) => {
+                this.starting.add(key);
+                cx.notify();
+                // run-now returns once the agent is ready (up to two minutes); the live terminal shows it running after.
+                cx.spawn(async (cx) => { await startSchedule(row); this.starting.delete(key); this.reloadSchedules(cx); });
+            },
+            onToggle: (cx) => {
+                row.on = !row.on;
+                cx.notify();
+                cx.spawn(async (cx) => { await switchSchedule(row, row.on); this.reloadSchedules(cx); });
+            },
+        });
+    }
+
+    reloadSchedules(cx) {
+        const space = spaces().find((s) => s.active);
+        cx.spawn(async (cx) => { this.schedules = await loadSchedules([space?.folder, this.root]); cx.notify(); });
+    }
+
     bar(used) {
         const fill = used >= 90 ? C.statusError : used >= 70 ? C.statusWarning : C.statusSuccess;
         const pct = Math.max(0, Math.min(100, used));
@@ -196,6 +223,9 @@ export class Activity {
         if (this.servers.length) sections.push(v_flex().w_full().flex_none()
             .child(this.heading("Servers", this.servers.length, sections.length > 0))
             .children(this.servers.map((cmd) => this.serverRow(cmd, space))));
+        if (this.schedules.length) sections.push(v_flex().w_full().flex_none()
+            .child(this.heading("Schedules", this.schedules.length, sections.length > 0))
+            .children(this.schedules.map((row) => this.scheduleRow(row))));
         const session = this.session();
         if (this.usage.length || session) sections.push(v_flex().w_full().flex_none()
             .child(this.heading("Usage", null, sections.length > 0))
