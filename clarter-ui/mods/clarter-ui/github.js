@@ -34,6 +34,7 @@ export function tooltip(pr) {
     const life = LIFECYCLE[pr.lifecycle] ?? LIFECYCLE.open;
     return [
         `#${pr.number} ${pr.title}`,
+        pr.author ? `By ${pr.author}` : null,
         `${life.label}: ${life.meaning}`,
         pr.conflict ? "Merge conflict with the base branch" : null,
         pr.review ? `Review: ${REVIEW[pr.review].label}${pr.reviewers ? ` (${pr.approvals}/${pr.reviewers} approvals)` : ""}` : null,

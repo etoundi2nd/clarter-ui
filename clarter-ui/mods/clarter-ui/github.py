@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# GitHub facts for the Frank layout, through `gh` (Python 3, standard library):
+# GitHub facts for the Clarter UI layout, through `gh` (Python 3, standard library):
 #   github.py prs <owner/repo#n> ...   each PR's state, review, CI, conflicts, comments
 #   github.py repo <folder>            the folder's GitHub URL, commits behind upstream
 #   github.py involved <folder>        open PRs in that repo that involve the user
@@ -10,7 +10,7 @@ import concurrent.futures, hashlib, json, os, re, subprocess, sys, time
 
 CACHE = os.path.join(os.path.expanduser("~"), ".cache", "clarter-ui")
 OPEN_TTL, DONE_TTL, REPO_TTL = 60, 3600, 60
-FIELDS = "number,url,title,state,isDraft,reviewDecision,statusCheckRollup,mergeable,autoMergeRequest,latestReviews,reviewRequests,comments,updatedAt"
+FIELDS = "number,url,title,author,state,isDraft,reviewDecision,statusCheckRollup,mergeable,autoMergeRequest,latestReviews,reviewRequests,comments,updatedAt"
 
 
 def sh(args, cwd=None, timeout=20):
@@ -69,6 +69,13 @@ def review_of(d):
     return None
 
 
+def author_of(a):
+    if not a or not a.get("login"):
+        return None
+    login = a["login"]
+    return f"{a['name']} (@{login})" if a.get("name") and a["name"] != login else f"@{login}"
+
+
 def shape(d):
     state = d["state"]
     lifecycle = "merged" if state == "MERGED" else "closed" if state == "CLOSED" else "draft" if d.get("isDraft") \
@@ -80,6 +87,7 @@ def shape(d):
     submitted = [r.get("submittedAt") for r in latest if r.get("submittedAt")]
     return {
         "number": d["number"], "url": d["url"], "title": d["title"], "lifecycle": lifecycle,
+        "author": author_of(d.get("author")),
         "review": review_of(d), "ci": ci_of(d.get("statusCheckRollup")),
         "conflict": d.get("mergeable") == "CONFLICTING",
         "comments": len(d.get("comments") or []),
@@ -93,7 +101,7 @@ def pr(key):
     def compute():
         out = sh(["gh", "pr", "view", number, "--repo", repo, "--json", FIELDS])
         return shape(json.loads(out)) if out else None
-    return cached("pr:" + key, lambda v: OPEN_TTL if v["lifecycle"] in ("open", "draft", "queued") else DONE_TTL, compute)
+    return cached("pr.v2:" + key, lambda v: OPEN_TTL if v["lifecycle"] in ("open", "draft", "queued") else DONE_TTL, compute)
 
 
 def slug_of(url):
@@ -121,7 +129,7 @@ def involved(folder):
     def compute():
         out = sh(["gh", "pr", "list", "--repo", slug, "--search", "involves:@me", "--state", "open", "--limit", "20", "--json", FIELDS])
         return [shape(d) for d in json.loads(out)] if out else None
-    return {"repo": slug.split("/")[-1], "url": info.get("url"), "prs": cached("involved:" + slug, OPEN_TTL, compute) or []}
+    return {"repo": slug.split("/")[-1], "url": info.get("url"), "prs": cached("involved.v2:" + slug, OPEN_TTL, compute) or []}
 
 
 def pull(folder):

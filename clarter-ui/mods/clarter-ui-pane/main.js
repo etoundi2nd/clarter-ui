@@ -1,4 +1,4 @@
-// Pane header of the Frank layout: program icon, name, folder; split, zoom and close
+// Pane header of the Clarter UI layout: program icon, name, folder; split, zoom and close
 // appear while the pointer is on the header. Props from the app: { pane, terminal }.
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
