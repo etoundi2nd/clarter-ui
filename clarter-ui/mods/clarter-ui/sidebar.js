@@ -7,10 +7,11 @@ import {
     layout, window, shared, setShared, checking, updates, notify, home,
 } from "herdr";
 import { C, ICON, AUTO, stop, duration, LAUNCHER, findLauncher } from "./tokens.js";
-import { prStatusChip, prMenuChip } from "./github.js";
+import { prStatusChip, prMenuChip, openSettings } from "./github.js";
 
 const MAX_SESSION_PRS = 12;
 import { agentTask, codexTitle, isCodex, clean } from "./agent-name.js";
+import { closePane, dropPlaceholders } from "./empty.js";
 
 const NEW_CLI = "Terminal";
 const STATUS_DOT = { blocked: C.statusAttention, done: C.accent, idle: C.statusIdle, working: C.statusIdle };
@@ -89,6 +90,7 @@ export class Spaces {
         this.prs = {};
         this.repos = {};
         this.accounts = { terminals: {}, accounts: [] };
+        this.running = {};
         this.hover = null;
         try { this.collapsed = new Set(JSON.parse(localStorage.getItem("clarter-ui.collapsedSpaces") ?? "[]")); } catch { this.collapsed = new Set(); }
         try { this.closedSubs = new Set(JSON.parse(localStorage.getItem("clarter-ui.closedSubs") ?? "[]")); } catch { this.closedSubs = new Set(); }
@@ -100,6 +102,9 @@ export class Spaces {
         cx.timer.every(10000, (cx) => { this.loadInfo(cx); this.arrange(cx); if (!Object.keys(this.repos).length) this.loadRepos(cx); });
         cx.timer.every(30000, (cx) => this.loadPrs(cx));
         cx.timer.every(60000, (cx) => this.loadRepos(cx));
+        cx.timer.every(5000, (cx) => this.loadRunning(cx));
+        cx.timer.every(1000, () => dropPlaceholders());
+        this.loadRunning(cx);
         this.loadInfo(cx);
         this.loadRepos(cx);
     }
@@ -122,6 +127,20 @@ export class Spaces {
                     cx.notify();
                 }
             } finally { this.infoBusy = false; }
+        });
+    }
+
+    // The command each plain terminal (not an agent) runs, keyed by address; an idle prompt is absent.
+    loadRunning(cx) {
+        const plain = [...new Set(panes().filter((p) => p.terminal && !agents().some((a) => a.address === p.terminal)).map((p) => p.terminal))];
+        if (this.runningBusy || window()?.visible === false) return;
+        if (!plain.length) { if (Object.keys(this.running).length) { this.running = {}; cx.notify(); } return; }
+        this.runningBusy = true;
+        cx.spawn(async (cx) => {
+            try {
+                const running = json(await python(["-I", `${appHome()}/mods/clarter-ui/foreground.py`, ...plain])) ?? {};
+                if (JSON.stringify(running) !== JSON.stringify(this.running)) { this.running = running; cx.notify(); }
+            } finally { this.runningBusy = false; }
         });
     }
 
@@ -251,7 +270,7 @@ export class Spaces {
     }
 
     // While the row is hovered the status turns into its close button.
-    statusMark(status, top, id, onClose) {
+    statusMark(status, top, id, onClose, running = false) {
         if (onClose && this.hoverRow === id) return div().id(`close-${id}`).size(16).absolute().left(6).top(top - 5).rounded(4).cursor_pointer()
             .hover((s) => s.bg(C.bgSessionToggle))
             .tooltip("Close pane")
@@ -260,7 +279,7 @@ export class Spaces {
             .child(image(ICON("close")).size(10).absolute().left(3).top(3));
         if (status === "working") return svg(ICON("spinner")).size(12).text_color(C.textMutedLegacy).spin(900).absolute().left(8).top(top - 3);
         return div().size(6).rounded(3).bg(STATUS_DOT[status] ?? C.statusIdle).absolute().left(11).top(top)
-            .when(status === "idle", (el) => el.opacity(0.25));
+            .when(status === "idle", (el) => el.opacity(running ? 0.5 : 0.25));
     }
 
     subToggle(address, count) {
@@ -275,7 +294,7 @@ export class Spaces {
     }
 
     // One session: 36px with its details line, 24px without.
-    row({ id, title, status, selected, terminal, metaEl, actions, onClick, onRight, onClose }) {
+    row({ id, title, status, selected, terminal, running, metaEl, actions, onClick, onRight, onClose }) {
         const plain = !metaEl;
         const h = plain ? 24 : 36;
         return div().id(id).w_full().h(h).flex_none().relative().rounded(6).cursor_pointer()
@@ -284,7 +303,7 @@ export class Spaces {
             .on_hover((on, cx) => { if (on) this.hoverRow = id; else if (this.hoverRow === id) this.hoverRow = null; cx.notify(); })
             .on_click(onClick)
             .when(Boolean(onRight), (el) => el.on_mouse_down("right", onRight))
-            .child(this.statusMark(status, plain ? 9 : 8, id, onClose))
+            .child(this.statusMark(status, plain ? 9 : 8, id, onClose, running))
             .when(terminal, (el) => el.child(image(ICON("terminal")).size(12).absolute().left(25).top(6)))
             // In flow, not absolute: the title gives way and the actions stay inside the row,
             // flush right, growing leftwards.
@@ -311,14 +330,15 @@ export class Spaces {
             subs.length > 0 && this.subToggle(a.address, subs.length),
         ].filter(Boolean);
         const prog = p.program;
+        const command = a ? null : this.running[p.terminal] ?? null;
         const unnamed = prog?.agent ? prog.name : !prog || prog.shell ? NEW_CLI : clean(p.title) || prog.name;
-        const title = p.name || (a ? agentTask(a, p.cwd) || a.program?.name : null) || (tab.named ? tab.name : null) || unnamed || NEW_CLI;
+        const title = p.name || (a ? agentTask(a, p.cwd) || a.program?.name : null) || command || (tab.named ? tab.name : null) || unnamed || NEW_CLI;
         const metaEl = a ? this.meta(a, info, tab) : null;
         const row = this.row({
             id: `row-${p.pane}`, title, status: a?.status ?? p.status ?? "idle", selected: p.pane === focusedPane,
-            terminal: !a, metaEl, actions,
+            terminal: !a, running: Boolean(command), metaEl, actions,
             onClick: () => this.goTo(p),
-            onClose: () => run("pane.close", { pane: p.pane }),
+            onClose: () => closePane(p.pane),
             onRight: (_e, cx) => { cx.stop_propagation(); openOverlay({ mod: "menu", kind: "popup", props: { tab: "pane", target: { pane: p.pane, terminal: p.terminal } } }); },
         });
         if (!subs.length || this.closedSubs.has(a.address)) return [row];
@@ -363,14 +383,21 @@ export class Spaces {
             .on_hover((on, cx) => { this.hover = on ? s.id : this.hover === s.id ? null : this.hover; cx.notify(); })
             .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); openOverlay({ mod: "menu", kind: "popup", props: { tab: "space", target: { id: s.id } } }); })
             // The triangle's glyph is centred on x 8 of 16: at left 6 it lines up with the rows' status dots.
-            .child(div().id(`fold-${s.id}`).size(16).absolute().left(6).top(8).rounded(4).cursor_pointer()
-                .hover((el) => el.bg(C.bgRowSelected))
-                .tooltip(this.collapsed.has(s.id) ? "Show sessions" : "Hide sessions")
-                .on_mouse_down("left", stop)
-                .on_click((_e, cx) => { cx.stop_propagation(); this.toggleSpace(s.id); cx.notify(); })
-                .child(svg(ICON(this.collapsed.has(s.id) ? "triangle-right" : "triangle-down")).size(16).text_color(C.textMutedLegacy)))
+            // Hovered, it turns into the space's close button; the name folds the space.
+            .child(div().id(`fold-${s.id}`).size(16).absolute().left(6).top(8).rounded(4)
+                .on_hover((on, cx) => { this.hoverFold = on ? s.id : this.hoverFold === s.id ? null : this.hoverFold; cx.notify(); })
+                .when(this.hoverFold === s.id, (el) => el.cursor_pointer().hover((el) => el.bg(C.bgRowSelected)).tooltip("Close space")
+                    .on_mouse_down("left", stop)
+                    .on_click((_e, cx) => { cx.stop_propagation(); this.hoverFold = null; run("space.close", { id: s.id }); })
+                    .child(image(ICON("close")).size(10).absolute().left(3).top(3)))
+                .when(this.hoverFold !== s.id, (el) => el.child(svg(ICON(this.collapsed.has(s.id) ? "triangle-right" : "triangle-down")).size(16).text_color(C.textMutedLegacy))))
             .child(h_flex().absolute().left(25).right(20).top(6).h(20).items_center()
-                .child(div().flex_shrink(1).min_w(0).truncate().mr(6).text_size(12).line_height("16px").font_weight(500).text_color(C.textPrimary).child(s.name))
+                .child(div().id(`name-${s.id}`).flex_shrink(1).min_w(0).truncate().mr(6).cursor_pointer()
+                    .text_size(12).line_height("16px").font_weight(500).text_color(C.textPrimary)
+                    .tooltip(this.collapsed.has(s.id) ? "Show sessions" : "Hide sessions")
+                    .on_mouse_down("left", stop)
+                    .on_click((_e, cx) => { cx.stop_propagation(); this.toggleSpace(s.id); cx.notify(); })
+                    .child(s.name))
                 .children(chips))
             .when(this.hover === s.id, (el) => el.child(div().id(`add-${s.id}`).absolute().right(0).top(8).size(16).rounded(4).cursor_pointer().hover((el) => el.bg(C.bgRowSelected))
                 .tooltip("New tab or agent in this space")

@@ -4,6 +4,7 @@ import { h_flex } from "gpui-base";
 import { spaces, panes, agents, run, openOverlay, layout, window, settings, nextCommand, checking, exec, appHome } from "herdr";
 import { C, ICON, AUTO, stop, LAUNCHER, findLauncher } from "./tokens.js";
 import { openSettings } from "./github.js";
+import { closeTab, isPlaceholder } from "./empty.js";
 
 const clean = (s) => (s ?? "").replace(/^[^\p{L}\p{N}\p{Ps}\p{Pi}]+/u, "").replace(/^\[ [!.] \] /, "").trim();
 
@@ -69,10 +70,10 @@ export class Toolbar {
             .child(div().ml(7).max_w(200).truncate().text_size(12).line_height(AUTO(12)).font_weight(500)
                 .text_color(c.active ? C.textTab : C.textSecondary).child(c.zoomed ? `${tabLabel(c, lead)} Z` : tabLabel(c, lead)))
             .when(Boolean(status), (el) => el.child(status))
-            .when(c.active, (el) => el.child(div().id(`close-${c.id}`).ml(7).size(11).flex_none().cursor_pointer()
+            .when(c.active && !isPlaceholder(c), (el) => el.child(div().id(`close-${c.id}`).ml(7).size(11).flex_none().cursor_pointer()
                 .tooltip("Close tab")
                 .on_mouse_down("left", stop)
-                .on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); })
+                .on_click((_e, cx) => { cx.stop_propagation(); closeTab(c.id); })
                 .child(image(ICON("close")).size(11))));
     }
 

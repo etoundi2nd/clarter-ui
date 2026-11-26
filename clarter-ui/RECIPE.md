@@ -19,8 +19,8 @@ The app background is `#17191b`, terminals sit on `#22262b`, text is Inter.
   - "Spaces" header (35px, `#7c7f82`, 12px) with a + that opens a terminal in a new space on
     `~/development` (or the home folder when there is none).
   - One block per space, 12px apart:
-    - a 32px header: a triangle (`#969ba2`) that folds the space, the name (12px, weight 500,
-      `#dddfe2`), and chips: GitHub, commits behind upstream (`#d7747d`, arrow down), open pull
+    - a 32px header: a triangle (`#969ba2`) that turns into the space's close button on hover,
+      the name (12px, weight 500, `#dddfe2`), which folds the space, and chips: GitHub, commits behind upstream (`#d7747d`, arrow down), open pull
       requests that involve you (`#969ba2`), and a + that appears on hover.
     - its sessions: 36px rows with a details line, 24px rows without one. A status mark at x 11,
       the title from x 25 (37 for a plain terminal, after a `>_` icon), and on the right the
@@ -59,13 +59,16 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
 - **Status marks**: working is a 12px spinner; blocked an amber dot `#dcab6c`; done a blue dot
   `#6ba9e9`; idle a grey dot `#777e86` at 25% opacity, with the title at 75%.
 - Hovering a session row turns its status mark into a close button (closes the pane, or kills a
-  sub-agent's terminal). Clicking a row focuses that pane; right-click opens Herdr's pane menu.
+  sub-agent's terminal).
+- **Empty spaces stay**: closing a space's last session (from its row or the tab's ×) leaves the
+  space with a "No sessions" tab offering New tab or agent, since Herdr closes a space with its last
+  tab. The tab goes once another tab opens there. Close the space from its header's triangle. Clicking a row focuses that pane; right-click opens Herdr's pane menu.
 - **Titles**: a name you gave wins; else the agent's own task title; else the program, so a
   fresh Claude reads "Claude Code"; a plain shell reads "Terminal". Long titles end in "…"; the
   chips on the right never leave the row.
 - **One space per folder**: every 10 seconds a tab whose terminals all sit in another space's
   folder moves into that space, and spaces opened on the same folder merge under the folder's
-  name. A space left empty is removed. The view follows the focused tab.
+  name. A space emptied by a merge is removed; one emptied by a move keeps a "No sessions" tab. The view follows the focused tab.
 - The behind chip pulls (`git pull --ff-only`); the GitHub chip opens the repo; the PR chips
   open the PR. A PR with a review you haven't opened yet shows a mark until you click it.
 - **Layout settings** (a dialog; also the `clarter-ui.settings` command): the AI commands, such
@@ -85,7 +88,8 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   `clarter-ui-pane` header) and the hidden `panel` column with a `panel-body` stack of `activity`,
   the shipped `files` and the shipped `changes`.
 - `mods/clarter-ui`: one mod; `props.role` picks brand, spaces, footer, toolbar, activity,
-  status, settings (the dialog) or prlist (a session's PR dropdown). `tokens.js` holds the colours; `github.js` the PR states, the PR row and AI review.
+  status, settings (the dialog), prlist (a session's PR dropdown) or empty (the "No sessions"
+  tab, `empty.js`). `tokens.js` holds the colours; `github.js` the PR states, the PR row and AI review.
 - `mods/clarter-ui-pane`: the pane header.
 - Herdr functions: `spaces`, `panes`, `agents`, `terminals`, `focused`, `layout`, `window`,
   `shared`, `setShared`, `exec`, `openOverlay`, `nextCommand`; commands `space.select`,
@@ -132,6 +136,8 @@ GitHub states use GitHub's own icons and colours: open `#3fb950`, draft `#9198a1
   with the review prompt.
 - `cmd-alt-b` and the Activity button show and hide the panel; in a GitHub repo it lists your
   open PRs, scrolling once they fill half the panel.
-- The space header's + appears only on hover; the triangle folds the space.
+- The space header's + appears only on hover; clicking the name folds the space; hovering the
+  triangle shows a close button that closes the space.
+- Closing a space's last session leaves the space with its "No sessions" tab.
 - Opening a terminal in a space and `cd`-ing into another space's folder moves its tab there
   within 10 seconds.

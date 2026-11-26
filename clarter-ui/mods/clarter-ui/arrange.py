@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # Moves tabs between Herdr.app spaces: arrange.py '[{"tab": "tb…", "to": "sp…"}, …]'
 # Herdr has no command for it, so this edits the app's layout doc on herdr-core, as herdr-task does.
-# A space left without tabs by a move is dropped: the app can't show an empty space. Spaces of one folder
-# merge under the folder's name.
-import itertools, json, os, subprocess, sys, time
+# A space left without tabs by a move gets the Clarter UI placeholder tab (the app can't show an empty
+# space), unless the move merged it into another space of its folder; those merge under the folder's name.
+import itertools, json, os, secrets, subprocess, sys, time
 
 CORE = os.path.expanduser("~/.local/bin/herdr-core")
 DOC = "herdr-app"
@@ -30,7 +30,7 @@ class Core:
 
 def apply(layout, moves):
     spaces = {s["id"]: s for s in layout["spaces"]}
-    emptied, moved = set(), 0
+    merged, moved = set(), 0
     for m in moves:
         source = next((s for s in layout["spaces"] if any(t["id"] == m["tab"] for t in s["tabs"])), None)
         target = spaces.get(m["to"])
@@ -43,10 +43,20 @@ def apply(layout, moves):
         target["tabs"].append(tab)
         if source.get("folder", "").rstrip("/") == target.get("folder", "").rstrip("/"):
             target["name"] = os.path.basename(target["folder"].rstrip("/"))
-        emptied.add(source["id"])
+            merged.add(source["id"])
         moved += 1
-    layout["spaces"] = [s for s in layout["spaces"] if s["tabs"] or s["id"] not in emptied]
+    layout["spaces"] = [s for s in layout["spaces"] if s["tabs"] or s["id"] not in merged]
+    for space in layout["spaces"]:
+        if not space["tabs"]:
+            space["tabs"].append(placeholder())
     return moved
+
+
+def placeholder():
+    # The tab mods/clarter-ui/empty.js keepSpace() opens; the sidebar finds it by this name.
+    tab = "tb" + secrets.token_hex(16)
+    block = {"type": "block", "id": "p" + secrets.token_hex(16), "content": {"mod": "clarter-ui", "props": {"role": "empty"}}}
+    return {"id": tab, "name": "No sessions", "root": {"type": "row", "id": tab, "children": [block]}}
 
 
 def main():
